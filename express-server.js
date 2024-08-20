@@ -3,7 +3,7 @@ import "dotenv/config";
 import bodyParser from "body-parser";
 import { users, products, carts, orders } from "./storage.js";
 import crypto from "crypto";
-import { CustomError, ValidationError, Unauthorized } from "./errorHandler.js";
+import { CustomError, ValidationError, Unauthorized, NotFound } from "./errorHandler.js";
 // import cors from "cors";
 const app = express();
 const port = 3000;
@@ -74,7 +74,7 @@ app.get("/api/products/:id", (req, res) => {
   const { id } = req.params;
   const item = products.filter((one) => one.id == id);
   if (item.length === 0) {
-    return errorProductFound(res);
+    throw new NotFound('Product not found')
     // res.status(404).json({ error: "Product not found" });
   }
   res.status(200).json(item);
@@ -108,7 +108,7 @@ app.put("/api/cart/:idProduct", isAuth, (req, res) => {
   const userId = checkUserById(req.headers["x-user-id"]);
 
   const checkProduct = checkProductById(req.params.idProduct);
-  if (!checkProduct) return errorProductFound(res);
+  if (!checkProduct)  throw new NotFound('Product not found');
 
   const checkCart = checkCartByUserId(userId.id);
   if (checkCart) {
@@ -141,10 +141,10 @@ app.delete("/api/cart/:idProduct", isAuth, (req, res) => {
       checkCart.products.splice(indexProduct, 1);
       res.status(200).json(checkCart);
     } else {
-      res.status(404).json({ error: "Product not found in cart" });
+      throw new NotFound("Product not found");
     }
   } else {
-    res.status(404).json({ error: "Cart not found" });
+    throw new NotFound("Cart not found");
   }
 });
 
@@ -161,7 +161,7 @@ app.post("/api/cart/checkout", isAuth, (req, res) => {
     orders.push(checkCart);
     res.status(200).json(orders);
   } else {
-    res.status(404).json({ error: "Cart not found" });
+    throw new NotFound("Cart not found");
   }
 });
 

@@ -5,7 +5,17 @@ export class CustomError extends Error {
     this.message = message;
   }
 }
+
 export class ValidationError extends CustomError {
+  constructor(message) {
+    super();
+    this.statusCode = 422;
+    this.message = message;
+  }
+}
+
+
+export class NotFound  extends CustomError {
   constructor(message) {
     super();
     this.statusCode = 404;
