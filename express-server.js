@@ -3,10 +3,48 @@ import "dotenv/config";
 import bodyParser from "body-parser";
 import { users, products, carts, orders } from "./storage.js";
 import crypto from "crypto";
-import { CustomError, ValidationError, Unauthorized, NotFound } from "./errorHandler.js";
+import fs from "fs";
+import path, { dirname } from "path";
+import { fileURLToPath } from "url";
+import { getProducts } from "./helper/getProducts.js";
+import { EventEmitter } from "events";
+
+import {
+  CustomError,
+  ValidationError,
+  Unauthorized,
+  NotFound,
+} from "./errorHandler.js";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
 // import cors from "cors";
 const app = express();
 const port = 3000;
+
+const eventEmitter = new EventEmitter();
+const logFilePath = path.join(__dirname, "filesUpload.log");
+
+const logToFile = (message) => {
+  const timestamp = new Date().toISOString();
+  const logMessage = `${timestamp} - ${message}\n`;
+  fs.appendFile(logFilePath, logMessage, (err) => {
+    if (err) console.error("Error writing to log file:", err);
+  });
+};
+
+eventEmitter.on("fileUploadStart", () => {
+  logToFile("File upload started");
+});
+
+eventEmitter.on("fileUploadEnd", () => {
+  logToFile("File upload ended successfully");
+});
+
+eventEmitter.on("fileUploadFailed", (error) => {
+  logToFile(`File upload failed: ${error.message}`);
+});
 
 app.use(bodyParser.json());
 
@@ -66,6 +104,26 @@ function isAuth(req, res, next) {
   next();
 }
 
+function readJsonFile(filePath) {
+  return new Promise((resolve, reject) => {
+    fs.readFile(filePath, "utf8", (err, data) => {
+      if (err) {
+        return reject(err);
+      }
+      if (!data) {
+        const initialData = [];
+        return resolve(initialData);
+      }
+      try {
+        const json = JSON.parse(data);
+        resolve(json);
+      } catch (parseErr) {
+        reject(parseErr);
+      }
+    });
+  });
+}
+
 app.get("/api/products", (req, res) => {
   res.status(200).json(products);
 });
@@ -74,7 +132,7 @@ app.get("/api/products/:id", (req, res) => {
   const { id } = req.params;
   const item = products.filter((one) => one.id == id);
   if (item.length === 0) {
-    throw new NotFound('Product not found')
+    throw new NotFound("Product not found");
     // res.status(404).json({ error: "Product not found" });
   }
   res.status(200).json(item);
@@ -108,7 +166,7 @@ app.put("/api/cart/:idProduct", isAuth, (req, res) => {
   const userId = checkUserById(req.headers["x-user-id"]);
 
   const checkProduct = checkProductById(req.params.idProduct);
-  if (!checkProduct)  throw new NotFound('Product not found');
+  if (!checkProduct) throw new NotFound("Product not found");
 
   const checkCart = checkCartByUserId(userId.id);
   if (checkCart) {
@@ -162,6 +220,218 @@ app.post("/api/cart/checkout", isAuth, (req, res) => {
     res.status(200).json(orders);
   } else {
     throw new NotFound("Cart not found");
+  }
+});
+
+// hw_53
+app.post("/product", async (req, res) => {
+  const userId = checkUserById(req.headers["x-user-id"]);
+
+  const { name, description, price } = req.body;
+  if (!name || !description || !price) {
+    throw new NotFound("You need to add name and description and price");
+  }
+  const id = crypto.randomUUID();
+  const obj = {
+    id: id,
+    name: name,
+    description: description,
+    price: price,
+    image: [],
+    video: [],
+  };
+  const filePathJson = path.join(__dirname, "./products.store.json");
+
+  let productJSON = await readJsonFile(filePathJson);
+
+  productJSON.push(obj);
+
+  fs.writeFile(
+    filePathJson,
+    JSON.stringify(productJSON, null, 2),
+    "utf8",
+    (err) => {
+      res.status(200).json(obj);
+    }
+  );
+});
+
+app.post("/product/:productId/image/upload", async (req, res) => {
+  const { productId } = req.params;
+  const id = crypto.randomUUID();
+  const directoryPath = path.join(__dirname, "productFiles", productId, "image");
+  const filePathJson = path.join(__dirname, "./products.store.json");
+
+  try {
+    await fs.promises.mkdir(directoryPath, { recursive: true });
+
+    const filePath = path.join(directoryPath, `${id}.jpg`);
+    eventEmitter.emit("fileUploadStart");
+
+    let productJSON = await readJsonFile(filePathJson);
+    const obj = productJSON.find((item) => item.id == productId);
+
+    if (obj) {
+      obj.image.push(`${id}.jpg`);
+    } else {
+      console.log("Object not found");
+    throw new NotFound("Product not found");
+
+    }
+
+    const writeFile = fs.createWriteStream(filePath);
+    req.pipe(writeFile);
+
+    writeFile.on("finish", async () => {
+      console.log("Uploaded");
+      eventEmitter.emit("fileUploadEnd");
+
+      await fs.promises.writeFile(
+        filePathJson,
+        JSON.stringify(productJSON, null, 2),
+        "utf8"
+      );
+
+      res.status(200).json(obj);
+    });
+
+    writeFile.on("error", (err) => {
+      console.error("File upload error:", err);
+      eventEmitter.emit("fileUploadFailed", err);
+      res.status(500).send("Error uploading file");
+    });
+
+  } catch (err) {
+    console.error("Failed to process request:", err);
+    eventEmitter.emit("fileUploadFailed", err);
+    res.status(500).json({ error: "Failed to process request" });
+  }
+});
+
+app.post("/product/:productId/video/upload", async (req, res) => {
+  const { productId } = req.params;
+  const id = crypto.randomUUID();
+  const directoryPath = path.join(__dirname, "productFiles", productId, "video");
+
+  try {
+    await fs.promises.mkdir(directoryPath, { recursive: true });
+
+    const filePath = path.join(directoryPath, `${id}.mp4`);
+    eventEmitter.emit("fileUploadStart");
+
+    const filePathJson = path.join(__dirname, "./products.store.json");
+    let productJSON = await readJsonFile(filePathJson);
+    const obj = productJSON.find((item) => item.id == productId);
+
+    if (obj) {
+      obj.video.push(`${id}.mp4`);
+    } else {
+      console.log("Object not found");
+    throw new NotFound("Product not found");
+
+    }
+
+    const writeFile = fs.createWriteStream(filePath);
+    req.pipe(writeFile);
+
+    writeFile.on("finish", async () => {
+      console.log("Uploaded");
+      eventEmitter.emit("fileUploadEnd");
+
+      await fs.promises.writeFile(
+        filePathJson,
+        JSON.stringify(productJSON, null, 2),
+        "utf8"
+      );
+
+      res.status(200).json(obj);
+    });
+
+    writeFile.on("error", (err) => {
+      console.error("File upload error:", err);
+      eventEmitter.emit("fileUploadFailed", err);
+      res.status(500).send("Error uploading file");
+    });
+  } catch (err) {
+    console.error("Failed to create directory or update JSON:", err);
+    eventEmitter.emit("fileUploadFailed", err);
+    res.status(500).json({ error: "Failed to process request" });
+  }
+});
+
+app.get("/product/image/:fileName", async (req, res) => {
+  const { fileName } = req.params;
+  const filePathJson = path.join(__dirname, "./products.store.json");
+  try {
+    eventEmitter.emit("fileUploadStart");
+    let productJSON = await readJsonFile(filePathJson);
+    const NameFile = fileName + ".jpg";
+    // console.log("json", productJSON);
+    const obj = productJSON.find((item) => item.image.includes(NameFile));
+    // console.log(obj);
+    if (!obj) {
+      eventEmitter.emit(
+        "fileUploadFailed",
+        new Error("Image not found in database")
+      );
+    throw new NotFound("Image not found in database");
+    }
+    const imagePath = path.join(
+      __dirname,
+      "productFiles",
+      obj.id,
+      "image",
+      NameFile
+    );
+
+    const stream = fs.createReadStream(imagePath);
+    stream.on("open", () => {
+      eventEmitter.emit("fileUploadEnd");
+    });
+
+    stream.on("error", (error) => {
+      eventEmitter.emit("fileUploadFailed", error);
+      res.status(500).send("Server error while reading the file");
+    });
+
+    stream.pipe(res);
+  } catch (err) {
+    eventEmitter.emit("fileUploadFailed", err);
+    res.status(500).send("Server error");
+  }
+});
+app.get("/product/video/:fileName", async (req, res) => {
+  const { fileName } = req.params;
+  const filePathJson = path.join(__dirname, "./products.store.json");
+  try {
+    eventEmitter.emit("fileUploadStart");
+    let productJSON = await readJsonFile(filePathJson);
+    const NameFile = fileName + ".mp4";
+    const obj = productJSON.find((item) => item.video.includes(NameFile));
+    if (!obj) {
+    throw new NotFound("video not found in database");
+    }
+    const videoPath = path.join(
+      __dirname,
+      "productFiles",
+      obj.id,
+      "video",
+      NameFile
+    );
+    const stream = fs.createReadStream(videoPath);
+    stream.on("open", () => {
+      eventEmitter.emit("fileUploadEnd");
+    });
+
+    stream.on("error", (error) => {
+      eventEmitter.emit("fileUploadFailed", error);
+      res.status(500).send("Server error while reading the file");
+    });
+
+    stream.pipe(res);
+  } catch (err) {
+    eventEmitter.emit("fileUploadFailed", err);
+    res.status(500).send("Server error");
   }
 });
 
