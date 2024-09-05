@@ -3,6 +3,7 @@ import { ValidationError } from "../errorHandler.js";
 import fs from "fs";
 import path, { dirname, join } from "path";
 import { fileURLToPath } from "url";
+import { NotFound } from "../errorHandler.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -78,7 +79,7 @@ export const uploadFileToProduct = async (productId, fileStream, fileType) => {
     const obj = productJSON.find((item) => item.id === productId);
 
     if (!obj) {
-      throw new Error("Product not found");
+    throw new NotFound("Product not found");
     }
 
     if (fileType === "image") {

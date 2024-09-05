@@ -2,12 +2,12 @@ import crypto from "crypto";
 import { carts, orders } from "../storage.js";
 import { checkProductById } from "../repository/products.repository.js";
 import { checkCartByUserId } from "../repository/cart.repository.js";
-
+import { NotFound } from "../errorHandler.js";
 
 export const addProductToCart = (userId, productId) => {
   const checkProduct = checkProductById(productId);
   if (!checkProduct) {
-    throw new Error("Product not found");
+    throw new NotFound("Product not found");
   }
 
   const checkCart = checkCartByUserId(userId);
@@ -28,7 +28,7 @@ export const addProductToCart = (userId, productId) => {
 export const removeProductFromCart = (userId, productId) => {
   const checkProduct = checkProductById(productId);
   if (!checkProduct) {
-    throw new Error("Product not found");
+    throw new NotFound("Product not found");
   }
 
   const checkCart = checkCartByUserId(userId);
@@ -40,10 +40,10 @@ export const removeProductFromCart = (userId, productId) => {
       checkCart.products.splice(indexProduct, 1);
       return checkCart;
     } else {
-      throw new Error("Product not found in cart");
+    throw new NotFound("Product not found");
     }
   } else {
-    throw new Error("Cart not found");
+    throw new NotFound("Cart not found");
   }
 };
 
@@ -58,6 +58,6 @@ export const checkoutCart = (userId) => {
     orders.push(checkCart);
     return orders;
   } else {
-    throw new Error("Cart not found");
+    throw new NotFound("Cart not found");
   }
 };

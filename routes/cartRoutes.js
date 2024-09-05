@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { isAuth } from "../repository/users.repository.js";
+import { isAuth } from "../middleware.js";
 import {
   addProductToCartHandler,
   removeProductFromCartHandler,
