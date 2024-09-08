@@ -14,8 +14,7 @@ export class ValidationError extends CustomError {
   }
 }
 
-
-export class NotFound  extends CustomError {
+export class NotFound extends CustomError {
   constructor(message) {
     super();
     this.statusCode = 404;
