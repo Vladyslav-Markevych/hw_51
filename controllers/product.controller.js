@@ -29,8 +29,6 @@ export const getProductById = (req, res) => {
 };
 
 export const createProductList = async (req, res) => {
-  // const userId = checkUserById(req.headers["x-user-id"]);
-  // const { name, description, price } = req.body;
   try {
     validateProductData(req.body);
     const product = createProductObject(req.body);
