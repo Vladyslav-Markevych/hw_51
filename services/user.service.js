@@ -5,6 +5,11 @@ import { addNewUser, getHashByEmail } from "../repository/users.repository.js";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
 
+export const roles = {
+  ADMIN: "Admin",
+  CUSTOMER: "Customer",
+};
+
 const shema = Joi.object({
   email: Joi.string()
     .max(254)
@@ -41,27 +46,19 @@ export const createNewUser = async (param) => {
   }
 };
 
-export const newAccessTokenCreate = (id) => {
-  return jwt.sign({ role: "Customer", id: id }, process.env.PASS_TOKEN, {
-    expiresIn: "30m",
+export const newAccessTokenCreate = (id, role) => {
+  return jwt.sign({ role: role, id: id }, process.env.ACCESS_TOKEN_SECRET, {
+    expiresIn: role === roles.ADMIN ? "1m" : "30m",
   });
 };
-export const newRefreshTokenCreate = (id) => {
-  return jwt.sign({ role: "Customer", id: id }, process.env.PASS_TOKEN, {
+
+export const newRefreshTokenCreate = (id, role) => {
+  return jwt.sign({ role: role, id: id }, process.env.REFRESH_TOKEN_SECRET, {
     expiresIn: "7d",
   });
 };
 
-export const newAccessTokenAdminCreate = (id) => {
-  return jwt.sign({ role: "Admin", id: id }, process.env.PASS_TOKEN, {
-    expiresIn: "1m",
-  });
-};
-export const newRefreshTokenAdminCreate = (id) => {
-  return jwt.sign({ role: "Admin", id: id }, process.env.PASS_TOKEN, {
-    expiresIn: "7d",
-  });
-};
+
 export const logInUser = async ({ email, password }) => {
   try {
     const hash = await getHashByEmail(email);
@@ -71,19 +68,16 @@ export const logInUser = async ({ email, password }) => {
       throw new ValidationError("Wrong email or password");
     }
 
-    if (email == "admin@gmail.com") {
-      const newAccessToken = newAccessTokenAdminCreate(hash.id);
-      const newRefreshToken = newRefreshTokenAdminCreate(hash.id);
-      return { newAccessToken, newRefreshToken };
-    } else {
-      const newAccessToken = newAccessTokenCreate(hash.id);
-      const newRefreshToken = newRefreshTokenCreate(hash.id);
-      return { newAccessToken, newRefreshToken };
-    }
-  } catch (errot) {
-    throw new ValidationError("Error logging ");
+    const role = email === "admin@gmail.com" ? roles.ADMIN : roles.CUSTOMER;
+    const newAccessToken = newAccessTokenCreate(hash.id, role);
+    const newRefreshToken = newRefreshTokenCreate(hash.id, role);
+
+    return { newAccessToken, newRefreshToken };
+  } catch (error) {
+    throw new ValidationError("Error logging in");
   }
 };
+
 
 export const createAdminAccount = () => {
   const email = process.env.ADMIN_LOGIN;

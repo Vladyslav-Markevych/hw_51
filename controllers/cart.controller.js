@@ -8,7 +8,7 @@ import jwt from "jsonwebtoken";
 
 export const addProductToCartHandler = async (req, res) => {
   const { accessToken } = req.cookies;
-  const decoded = jwt.verify(accessToken, process.env.PASS_TOKEN);
+  const decoded = jwt.verify(accessToken, process.env.ACCESS_TOKEN);
   const { idProduct } = req.params;
 
   try {
@@ -21,7 +21,7 @@ export const addProductToCartHandler = async (req, res) => {
 
 export const removeProductFromCartHandler = async (req, res) => {
   const { accessToken } = req.cookies;
-  const decoded = jwt.verify(accessToken, process.env.PASS_TOKEN);
+  const decoded = jwt.verify(accessToken, process.env.ACCESS_TOKEN);
   const { idProduct } = req.params;
 
   try {
@@ -34,7 +34,7 @@ export const removeProductFromCartHandler = async (req, res) => {
 
 export const checkoutHandler = async (req, res) => {
   const { accessToken } = req.cookies;
-  const decoded = jwt.verify(accessToken, process.env.PASS_TOKEN);
+  const decoded = jwt.verify(accessToken, process.env.ACCESS_TOKEN);
 
   try {
     const order = checkoutCart(decoded.id);

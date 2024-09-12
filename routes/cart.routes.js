@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { isAuth, isAuthentification } from "../middleware.js";
+import { isAuth, isAuthorization, roles } from "../middleware.js";
 import {
   addProductToCartHandler,
   removeProductFromCartHandler,
@@ -84,7 +84,7 @@ const router = Router();
  *                   type: string
  *                   description: Error message.
  */
-router.put("/api/cart/:idProduct", isAuth, isAuthentification, addProductToCartHandler);
+router.put("/api/cart/:idProduct", isAuth, isAuthorization([roles.CUSTOMER]), addProductToCartHandler);
 
 /**
  * @openapi
@@ -153,7 +153,7 @@ router.put("/api/cart/:idProduct", isAuth, isAuthentification, addProductToCartH
  *                   type: string
  *                   description: Error message.
  */
-router.delete("/api/cart/:idProduct", isAuth, isAuthentification, removeProductFromCartHandler);
+router.delete("/api/cart/:idProduct", isAuth, isAuthorization([roles.CUSTOMER]), removeProductFromCartHandler);
 
 /**
  * @openapi
@@ -226,6 +226,6 @@ router.delete("/api/cart/:idProduct", isAuth, isAuthentification, removeProductF
  *                   type: string
  *                   description: Error message.
  */
-router.post("/api/cart/checkout", isAuth, isAuthentification, checkoutHandler);
+router.post("/api/cart/checkout", isAuth, isAuthorization([roles.CUSTOMER]), checkoutHandler);
 
 export default router;

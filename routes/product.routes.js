@@ -1,8 +1,8 @@
 import { Router } from "express";
 import {
   isAuth,
-  isAuthentification,
-  isAuthentificationAdmin,
+  isAuthorization, 
+  roles,
 } from "../middleware.js";
 import {
   getProductFromStorage,
@@ -56,7 +56,7 @@ const router = Router();
  *       401:
  *         description: Unauthorized. Token may be missing or invalid.
  */
-router.get("/api/products", isAuth, isAuthentification, getProductFromStorage);
+router.get("/api/products", isAuth, isAuthorization([roles.CUSTOMER, roles.ADMIN]), getProductFromStorage);
 
 /**
  * @openapi
@@ -106,7 +106,8 @@ router.get("/api/products", isAuth, isAuthentification, getProductFromStorage);
  *       401:
  *         description: Unauthorized. Token may be missing or invalid.
  */
-router.get("/api/products/:id", isAuth, isAuthentification, getProductById);
+router.get("/api/products/:id", isAuth, isAuthorization([roles.CUSTOMER, roles.ADMIN]), getProductById);
+
 
 /**
  * @openapi
@@ -179,8 +180,7 @@ router.get("/api/products/:id", isAuth, isAuthentification, getProductById);
  *       401:
  *         description: Unauthorized. Token may be missing or invalid.
  */
-router.post("/product", isAuth, isAuthentificationAdmin, createProductList);
-
+router.post("/product", isAuth, isAuthorization([roles.ADMIN]), createProductList);
 /**
  * @openapi
  * /product/{productId}/image/upload:
@@ -250,12 +250,7 @@ router.post("/product", isAuth, isAuthentificationAdmin, createProductList);
  *       500:
  *         description: Internal server error. Failed to upload the image.
  */
-router.post(
-  "/product/:productId/image/upload",
-  isAuth,
-  isAuthentificationAdmin,
-  uploadImage
-);
+router.post("/product/:productId/image/upload", isAuth, isAuthorization([roles.ADMIN]), uploadImage);
 
 /**
  * @openapi
@@ -326,12 +321,8 @@ router.post(
  *       500:
  *         description: Internal server error. Failed to upload the video.
  */
-router.post(
-  "/product/:productId/video/upload",
-  isAuth,
-  isAuthentificationAdmin,
-  uploadVideo
-);
+router.post("/product/:productId/video/upload", isAuth, isAuthorization([roles.ADMIN]), uploadVideo);
+
 
 /**
  * @openapi
@@ -366,7 +357,7 @@ router.post(
  *       500:
  *         description: Internal server error. Failed to retrieve the image.
  */
-router.get("/product/image/:fileName", isAuth, isAuthentification, getImage);
+router.get("/product/image/:fileName", isAuth, isAuthorization([roles.CUSTOMER]), getImage);
 
 /**
  * @openapi
@@ -401,6 +392,6 @@ router.get("/product/image/:fileName", isAuth, isAuthentification, getImage);
  *       500:
  *         description: Internal server error. Failed to retrieve the video.
  */
-router.get("/product/video/:fileName", isAuth, isAuthentification, getVideo);
+router.get("/product/video/:fileName", isAuth, isAuthorization([roles.CUSTOMER]), getVideo);
 
 export default router;

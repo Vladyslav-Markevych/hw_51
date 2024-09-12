@@ -8,51 +8,31 @@ import {
 export function isAuth(req, res, next) {
   try {
     const { accessToken } = req.cookies;
-    const decoded = jwt.verify(accessToken, process.env.PASS_TOKEN);
-    console.log(decoded);
+    const decoded = jwt.verify(accessToken, process.env.ACCESS_TOKEN_SECRET);
+    req.user = decoded; 
     next();
   } catch (err) {
     updateRefreshToken(req, res, next);
   }
 }
+export function isAuthorization(roles) {
+  return (req, res, next) => {
+    if (!roles.includes(req.user.role)) {
+      throw new UnAuthentification("You do not have access");
+    }
+    next();
+  };
+}
 
-export function isAuthentification(req, res, next) {
-  try {
-    const { accessToken } = req.cookies;
-    const decoded = jwt.verify(accessToken, process.env.PASS_TOKEN);
-    if (decoded.role !== "Customer" && decoded.role !== "Admin") {
-      throw new UnAuthentification("You do not have access");
-    }
-    next();
-  } catch (err) {
-      throw new UnAuthentification("You do not have access");
-  }
-}
-export function isAuthentificationAdmin(req, res, next) {
-  try {
-    const { accessToken } = req.cookies;
-    const decoded = jwt.verify(accessToken, process.env.PASS_TOKEN);
-    console.log("role-----------", decoded.role);
-    if (decoded.role !== "Admin") {
-      throw new UnAuthentification("You do not have access");
-    }
-    next();
-  } catch (err) {
-      throw new UnAuthentification("You do not have access");
-  }
-}
 
 export function updateRefreshToken(req, res, next) {
   try {
     const { refreshToken } = req.cookies;
-    const decodedToken = jwt.verify(refreshToken, process.env.PASS_TOKEN);
+    const decodedToken = jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET);
     if (decodedToken) {
-      const newAccessToken = newAccessTokenCreate();
-      const newRefreshToken = newRefreshTokenCreate();
-      console.log(
-        "newaccess",
-        jwt.verify(newAccessToken, process.env.PASS_TOKEN)
-      );
+      const newAccessToken = newAccessTokenCreate(decodedToken.id, decodedToken.role);
+      const newRefreshToken = newRefreshTokenCreate(decodedToken.id, decodedToken.role);
+
       res.cookie("accessToken", newAccessToken, {
         httpOnly: true,
         sameSite: "None",
