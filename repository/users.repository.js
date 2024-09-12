@@ -12,3 +12,12 @@ export function addNewUser(param) {
 }
 
 export const checkUserById = (param) => users.find((item) => item.id == param);
+
+
+
+export const getHashByEmail = async (email) => {
+  const check = users.find((user) => user.email == email);
+  return check;
+};
+// export const checkRefreshToken = ({ email, password }) =>
+//   users.find((user) => user.email === email && user.password === password);

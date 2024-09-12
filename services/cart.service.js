@@ -49,6 +49,7 @@ export const removeProductFromCart = (userId, productId) => {
 
 export const checkoutCart = (userId) => {
   const checkCart = checkCartByUserId(userId);
+  console.log('checkCart ------------------------ ',checkCart)
   if (checkCart) {
     const totalPrice = checkCart.products.reduce(
       (total, item) => total + item.price,
@@ -56,7 +57,7 @@ export const checkoutCart = (userId) => {
     );
     checkCart.totalPrice = totalPrice;
     orders.push(checkCart);
-    return orders;
+    return checkCart;
   } else {
     throw new NotFound("Cart not found");
   }

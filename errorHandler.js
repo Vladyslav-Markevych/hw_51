@@ -28,3 +28,10 @@ export class Unauthorized extends CustomError {
     this.message = message;
   }
 }
+export class UnAuthentification extends CustomError {
+  constructor(message) {
+    super();
+    this.statusCode = 403;
+    this.message = message;
+  }
+}
